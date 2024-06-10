@@ -49,6 +49,16 @@ function L16Buffer_to_Float32Array(buffer: Buffer) {
 }
 
 
+interface DataItem {
+  key?: string;
+  start: number;
+  end: number;
+}
+
+interface Data {
+  [key: string]: DataItem;
+}
+
 class BfskSpeechRecogStream extends Writable {
   eventEmitter: any
 
@@ -73,12 +83,17 @@ class BfskSpeechRecogStream extends Writable {
     }
 
     this.detector = goertzel([zero, one], gs_opts)
-    this.detector.on('toneEnd', (data: object) => {
-      Object.keys(data).forEach(key => {
+    this.detector.on('toneEnd', (data: Data) => {
+      // generate array of objects adding the key
+      const arr = Object.keys(data).map(k => { data[k].key = k; return data[k]})
+      // sort in place by end
+      arr.sort((a,b) => { return a.end - b.end})
+
+      arr.forEach(item => {
         var binary
-        if(key == this.zero) {
+        if(item.key == this.zero) {
           binary = 0
-        } else if(key == this.one) {
+        } else if(item.key == this.one) {
           binary = 1
         } else {
           return
