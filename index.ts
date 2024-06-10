@@ -4,6 +4,8 @@ const { Writable } = require("stream")
 
 const events = require("events")
 
+const AGGREGATION_TIMEOUT = 500
+
 type Format = {
   audioFormat: number,
   sampleRate: number,
@@ -60,7 +62,10 @@ interface Data {
 }
 
 class BfskSpeechRecogStream extends Writable {
+  sampleRate: number
   eventEmitter: any
+  timeoutID: NodeJS.Timeout | null = null;
+  aggregated: string
 
   constructor(opts: Opts) {
     super();
@@ -98,11 +103,15 @@ class BfskSpeechRecogStream extends Writable {
         } else {
           return
         }
-        this.eventEmitter.emit('binary', binary)
+        this.emitBinary(binary)
       })
     })
 
     this.eventEmitter = new events.EventEmitter()
+
+    this.aggregated = ""
+
+    this.sampleRate = opts.format.sampleRate
   }
 
   on(evt: string, cb: EventCallback) {
@@ -119,6 +128,31 @@ class BfskSpeechRecogStream extends Writable {
 
     callback();
     return true;
+  }
+
+  emitBinary(binary: number) {
+    this.eventEmitter.emit("binary", binary);
+
+    this.aggregated += binary.toString()
+
+    if(this.timeoutID) {
+      //console.log("clearing timeout")
+      clearTimeout(this.timeoutID)
+      this.timeoutID = null
+    }
+
+    //console.log("setting timeout")
+    this.timeoutID = setTimeout(() => {
+      //console.log("timeout", this.aggregated)
+      const matches = this.aggregated.match(/.{8}/g) ?? [];
+      const transcript = matches
+        .map(binaryString => parseInt(binaryString, 2)) // Convert binary string to number
+        .map(code => String.fromCharCode(code)) // Convert number to character
+        .join("");
+      this.eventEmitter.emit("speech", {transcript, raw: this.aggregated})
+      this.timeoutID = null
+      this.aggregated = ""
+    }, AGGREGATION_TIMEOUT)
   }
 }
 
