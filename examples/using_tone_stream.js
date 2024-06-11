@@ -38,8 +38,8 @@ const sr = new BfskSpeechRecogStream({
 
 const speaker = new Speaker(format)
 
-sr.on('binary', data => {
-  console.log(new Date(), 'binary', data)
+sr.on('bit', data => {
+  console.log(new Date(), 'bit', data)
 })
 
 sr.on('speech', data => {

@@ -6,6 +6,8 @@ const events = require("events")
 
 const AGGREGATION_TIMEOUT = 500
 
+const AGGREGATION_LIMIT = 1024 * 8;
+
 type Format = {
   audioFormat: number,
   sampleRate: number,
@@ -95,15 +97,15 @@ class BfskSpeechRecogStream extends Writable {
       arr.sort((a,b) => { return a.end - b.end})
 
       arr.forEach(item => {
-        var binary
+        var bit
         if(item.key == this.zero) {
-          binary = 0
+          bit = 0
         } else if(item.key == this.one) {
-          binary = 1
+          bit= 1
         } else {
           return
         }
-        this.emitBinary(binary)
+        this.emitBit(bit)
       })
     })
 
@@ -130,20 +132,7 @@ class BfskSpeechRecogStream extends Writable {
     return true;
   }
 
-  emitBinary(binary: number) {
-    this.eventEmitter.emit("binary", binary);
-
-    this.aggregated += binary.toString()
-
-    if(this.timeoutID) {
-      //console.log("clearing timeout")
-      clearTimeout(this.timeoutID)
-      this.timeoutID = null
-    }
-
-    //console.log("setting timeout")
-    this.timeoutID = setTimeout(() => {
-      //console.log("timeout", this.aggregated)
+  emitSpeech() {
       const matches = this.aggregated.match(/.{8}/g) ?? [];
       const transcript = matches
         .map(binaryString => parseInt(binaryString, 2)) // Convert binary string to number
@@ -152,6 +141,27 @@ class BfskSpeechRecogStream extends Writable {
       this.eventEmitter.emit("speech", {transcript, raw: this.aggregated})
       this.timeoutID = null
       this.aggregated = ""
+  }
+
+  emitBit(bit: number) {
+    this.eventEmitter.emit("bit", bit);
+
+    this.aggregated += bit.toString()
+
+    if(this.timeoutID) {
+      //console.log("clearing timeout")
+      clearTimeout(this.timeoutID)
+      this.timeoutID = null
+    }
+
+    if(this.aggregated.length >= AGGREGATION_LIMIT) {
+      this.emitSpeech()
+      return
+    }
+
+    //console.log("setting timeout")
+    this.timeoutID = setTimeout(() => {
+      this.emitSpeech()
     }, AGGREGATION_TIMEOUT)
   }
 }
