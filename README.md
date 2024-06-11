@@ -14,13 +14,14 @@ npm i bfsk-speech-recog-stream
 
 You will need to have some extra modules installed:
 ```
-npm i tone-stream speaker
+npm i bfsk-speech-synth-stream speaker
 ```
 Then you can try this code:
 ```
-const BSRS = require('bfsk-speech-recog-stream')
-const { ToneStream, utils } = require('tone-stream')
 const Speaker = require('speaker')
+
+const BfskSpeechSynthStream = require('bfsk-speech-synth-stream')
+const BfskSpeechRecogStream = require('bfsk-speech-recog-stream')
 
 const zero_freq = 500
 const one_freq = 2000
@@ -28,6 +29,7 @@ const one_freq = 2000
 const sampleRate = 8000
 
 const language = `${zero_freq}:${one_freq}`
+const voice = '5' // tone_duration
 
 const audioFormat = 1 // LINEAR16
 
@@ -41,14 +43,20 @@ const format = {
   signed,
 }
 
-const ts = new ToneStream(format)
-const text = "hello, world"
-const tone_duration = 5 
-const tones = utils.gen_binary_tones_from_text(text, tone_duration, zero_freq, one_freq, sampleRate)
-ts.concat(tones)
-ts.add([100, 's'])
+const params = {
+  text: 'hello, world',
+  language,
+  voice,
+}
 
-const sr = new BSRS({
+const opts = {
+  format,
+  params,
+}
+
+const ss = new BfskSpeechSynthStream(opts)
+
+const sr = new BfskSpeechRecogStream({
   format,
   params: {
     language,
@@ -61,12 +69,13 @@ sr.on('speech', data => {
   console.log(new Date(), 'speech', JSON.stringify(data, null, 2))
 })
 
-ts.pipe(sr)
-ts.pipe(speaker)
+ss.pipe(sr)
+ss.pipe(speaker)
+
 ```
 Output:
 ```
-2024-06-10T23:09:46.396Z speech {
+2024-06-11T00:32:25.174Z speech {
   "transcript": "hello, world",
   "raw": "011010000110010101101100011011000110111100101100001000000111011101101111011100100110110001100100"
 }

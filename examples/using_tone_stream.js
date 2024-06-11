@@ -1,6 +1,6 @@
 const Speaker = require('speaker')
 
-const BfskSpeechSynthStream = require('bfsk-speech-synth-stream')
+const { ToneStream, utils } = require('tone-stream')
 const BfskSpeechRecogStream = require('../index.js')
 
 const zero_freq = 500
@@ -9,7 +9,6 @@ const one_freq = 2000
 const sampleRate = 8000
 
 const language = `${zero_freq}:${one_freq}`
-const voice = '5' // tone_duration
 
 const audioFormat = 1 // LINEAR16
 
@@ -23,18 +22,12 @@ const format = {
   signed,
 }
 
-const params = {
-  text: 'hello, world',
-  language,
-  voice,
-}
-
-const opts = {
-  format,
-  params,
-}
-
-const ss = new BfskSpeechSynthStream(opts)
+const ts = new ToneStream(format)
+const text = "hello, world"
+const tone_duration = 5 // if you increase this, you might need to avoid calling "ts.pipe(speaker)" as it will cause processing of data to get slow and speech timeout will happen too soon.
+const tones = utils.gen_binary_tones_from_text(text, tone_duration, zero_freq, one_freq, sampleRate)
+ts.concat(tones)
+ts.add([100, 's'])
 
 const sr = new BfskSpeechRecogStream({
   format,
@@ -53,5 +46,5 @@ sr.on('speech', data => {
   console.log(new Date(), 'speech', JSON.stringify(data, null, 2))
 })
 
-ss.pipe(sr)
-ss.pipe(speaker)
+ts.pipe(sr)
+ts.pipe(speaker)

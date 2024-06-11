@@ -1,6 +1,6 @@
 {
   "name": "bfsk-speech-recog-stream",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A node.js module implementing a writable audio stream that detects Binary FSK (Frequency-shift keying) for testing purposes",
   "main": "index.js",
   "scripts": {
@@ -30,6 +30,7 @@
   "devDependencies": {
     "@mayama/audio-utils": "^1.2.0",
     "@types/node": "^20.14.2",
+    "bfsk-speech-synth-stream": "^1.1.0",
     "speaker": "^0.5.5",
     "tone-stream": "^1.15.0",
     "typescript": "^5.4.5",
